@@ -487,6 +487,37 @@ def api_ohlc(ticker):
     return jsonify(bars=bars)
 
 
+_T_ADVICE = {
+    "T买区": "统计超卖共振：做T可分批接回/抄底观察。先看价格在 VWAP−2σ 附近是否止跌企稳，不抢瀑布中段。",
+    "偏T买": "接近买回区：再等 RSI/MFI 进一步衰竭，或回踩 VWAP−2σ 企稳后再动手。",
+    "T卖区": "冲高过热共振：持仓可分批做T卖出兑现，回落到 VWAP 附近再考虑接回。",
+    "偏T卖": "接近卖出区：冲高乏力可先兑现一部分，破 VWAP+1σ 回落则动作加快。",
+    "观望": "价格在统计区间中部，做T无优势——不动也是操作。",
+}
+
+
+@app.route("/api/tassist/<ticker>")
+def api_tassist(ticker):
+    """做T助手：5分钟线算 VWAP±σ带 + 日内RSI + MFI(资金流量) → 当前T区位与建议。"""
+    ticker = ticker.strip().upper().replace(" ", "")
+    if not valid_ticker(ticker):
+        return jsonify(ok=False, msg="非法代码"), 400
+    q = market.quote(ticker)
+    df = market.fetch_intraday(ticker, interval="5m", prepost=True)
+    snap = signals.analyze_intraday(df, prev_close=q.get("prev_close") if q else None)
+    if not snap:
+        return jsonify(ok=False, msg="暂无日内分钟数据（隔夜/休市或指数无盘前线）")
+    zone = snap.get("t_zone", "观望")
+    return jsonify(ok=True, zone=zone, advice=_T_ADVICE.get(zone, ""),
+                   reasons=snap.get("t_reasons") or [],
+                   buy_score=snap.get("t_buy_score"), sell_score=snap.get("t_sell_score"),
+                   last=snap.get("last"), vwap=snap.get("vwap"),
+                   band_dn2=snap.get("band_dn2"), band_up2=snap.get("band_up2"),
+                   day_high=snap.get("day_high"), day_low=snap.get("day_low"),
+                   rsi=snap.get("rsi"), mfi=snap.get("mfi"),
+                   range_pos=snap.get("range_pos"))
+
+
 @app.route("/api/status")
 def api_status():
     s = dict(desk_status)

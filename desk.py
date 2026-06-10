@@ -28,6 +28,7 @@ DEFAULT_LEVERAGE = {
 HARD_EVENTS = {
     "drop", "break_ma50", "new_low", "rsi_os", "rsi_ob", "macd_dead", "macd_golden",
     "fast_drop", "fast_pop", "gap", "vwap_break", "intraday_low", "preopen_risk",
+    "t_buy", "t_sell",
 }
 
 

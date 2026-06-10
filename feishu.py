@@ -126,6 +126,7 @@ def build_desk_card(sig):
             f"日内：距开盘 {_fmt_pct(intra.get('pct_from_open'))}　VWAP {_g(intra,'vwap')}"
             f"（{'上' if intra.get('above_vwap') else '下'} {_fmt_pct(intra.get('vwap_dist'))}）　"
             f"近15分 {_fmt_pct(intra.get('vel_15m'))}　量脉冲 {_g(intra,'vol_pulse')}×"
+            f"　T区位 **{intra.get('t_zone', '—')}**　MFI {_g(intra,'mfi')}"
         )
 
     # 日线技术快照

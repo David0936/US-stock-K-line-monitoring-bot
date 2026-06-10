@@ -32,6 +32,23 @@
 </section>
 {% endif %}
 
+<!-- 做T助手：盘中实时区位（VWAP±2σ / 日内RSI / MFI资金流） -->
+<section id="tassist" style="border-bottom:3px double var(--rule);padding:10px 18px;display:none">
+  <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center">
+    <span style="font-size:11px;font-weight:800;letter-spacing:0.1em;background:var(--ink);color:var(--paper);padding:2px 8px">做T助手</span>
+    <span class="sigtag" id="tz-chip" style="margin-top:0;font-size:11px">—</span>
+    <span class="mono" style="font-size:12px">VWAP <b id="tz-vwap">—</b></span>
+    <span class="mono" style="font-size:12px">买回带(−2σ) <b id="tz-dn" class="down">—</b></span>
+    <span class="mono" style="font-size:12px">卖出带(+2σ) <b id="tz-up" class="up">—</b></span>
+    <span class="mono" style="font-size:12px">MFI资金流 <b id="tz-mfi">—</b></span>
+    <span class="mono" style="font-size:12px">日内RSI <b id="tz-rsi">—</b></span>
+    <span class="mono" style="font-size:12px">日内位置 <b id="tz-pos">—</b>%</span>
+  </div>
+  <div id="tz-advice" style="font-size:13px;margin-top:7px;font-weight:500"></div>
+  <div id="tz-reasons" class="mono" style="font-size:11px;color:var(--ink-3);margin-top:4px"></div>
+  <div style="font-size:10px;color:var(--ink-3);margin-top:5px">基于 VWAP±2σ / 日内RSI / MFI(资金流量指标) 的统计区位，免费数据无逐笔大单，仅供参考，非投资建议。</div>
+</section>
+
 <!-- 分钟 K 线 -->
 <section>
   <div class="sec-head">
@@ -138,7 +155,25 @@ async function analyze(t,btn){
     if(d.ok){ location.reload(); } else { alert('失败：'+d.msg); btn.disabled=false; btn.textContent='🤖 立即 AI 分析'; }
   }catch(e){ alert('请求失败：'+e); btn.disabled=false; btn.textContent='🤖 立即 AI 分析'; }
 }
+/* ---- 做T助手 ---- */
+var TZ_CLASS = {'T买区':'sig-抄底区-超卖','偏T买':'sig-持有-趋势健康','T卖区':'sig-逃顶预警','偏T卖':'sig-减仓-趋势破位','观望':'sig-观望-中性'};
+async function refreshTassist(){
+  try{
+    var d=await (await fetch('/api/tassist/'+encodeURIComponent('{{ ticker }}'))).json();
+    var box=document.getElementById('tassist');
+    if(!d.ok){ box.style.display='none'; return; }
+    box.style.display='block';
+    var chip=document.getElementById('tz-chip');
+    chip.textContent=d.zone; chip.className='sigtag '+(TZ_CLASS[d.zone]||'sig-观望-中性'); chip.style.marginTop='0';
+    var set=function(id,v){ document.getElementById(id).textContent=(v===null||v===undefined)?'—':v; };
+    set('tz-vwap',d.vwap); set('tz-dn',d.band_dn2); set('tz-up',d.band_up2);
+    set('tz-mfi',d.mfi); set('tz-rsi',d.rsi); set('tz-pos',d.range_pos);
+    document.getElementById('tz-advice').textContent=d.advice||'';
+    document.getElementById('tz-reasons').textContent=(d.reasons&&d.reasons.length)?('依据：'+d.reasons.join('；')):'';
+  }catch(e){}
+}
 if(window.LightweightCharts){ initChart(); } else { window.addEventListener('load',initChart); }
-refreshQuote(); setInterval(refreshQuote,60000); setInterval(function(){loadChart(curIv)},60000);
+refreshQuote(); refreshTassist();
+setInterval(refreshQuote,60000); setInterval(function(){loadChart(curIv)},60000); setInterval(refreshTassist,60000);
 </script>
 {% endblock %}

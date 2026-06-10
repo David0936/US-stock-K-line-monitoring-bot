@@ -238,8 +238,25 @@ def analyze_intraday(df, prev_close=None):
     v_med = float(vol.tail(20).median() or 0)
     vol_pulse = _f(v_last / v_med, 1) if v_med else None
 
+    # MFI(14) 资金流量指标：成交量加权的"钱在流入还是流出"，免费数据下最接近资金流向的代理
+    mfi_v = None
+    if len(df) >= 15:
+        mf = tp * vol
+        dtp = tp.diff()
+        pos = mf.where(dtp > 0, 0.0).rolling(14).sum()
+        neg = mf.where(dtp < 0, 0.0).rolling(14).sum()
+        mfi_v = _f((100 - 100 / (1 + pos / neg.replace(0, 1e-9))).iloc[-1])
+
+    # VWAP 运行序列 ±σ 带：做T的统计区位（触下轨=超卖买回区，触上轨=冲高卖出区）
+    # 盘前常有零成交 bar：累计量=0 时 VWAP 序列无意义会污染 σ，只在累计量>0 的 bar 上算偏差
+    cumv_s = vol.cumsum()
+    valid = cumv_s > 0
+    vwap_series = (tp * vol).cumsum() / cumv_s.replace(0, 1e-9)
+    dev = (c - vwap_series)[valid]
+    sd = float(dev.std()) if int(valid.sum()) > 5 else 0.0
+
     rng = (day_high - day_low) or 1e-9
-    return {
+    out = {
         "last": _f(last),
         "day_open": _f(day_open),
         "day_high": _f(day_high),
@@ -256,7 +273,60 @@ def analyze_intraday(df, prev_close=None):
         "vol_pulse": vol_pulse,
         "range_pos": _f((last - day_low) / rng * 100),   # 0=日低 100=日高
         "bars": len(df),
+        "mfi": mfi_v,
+        "vwap_sd": _f(sd, 3),
+        "band_up1": _f(vwap + sd), "band_dn1": _f(vwap - sd),
+        "band_up2": _f(vwap + 2 * sd), "band_dn2": _f(vwap - 2 * sd),
     }
+    out.update(_t_zone(out))
+    return out
+
+
+def _t_zone(s):
+    """做T区位判定：VWAP±σ带 / 日内RSI / MFI 多条件打分。
+    返回 {t_zone, t_buy_score, t_sell_score, t_reasons}。
+    T买区=统计超卖(接回/抄底观察)；T卖区=冲高过热(分批兑现)。仅统计区位，非保证。"""
+    last, vwap, sd = s.get("last"), s.get("vwap"), s.get("vwap_sd") or 0
+    rsi, mfi = s.get("rsi"), s.get("mfi")
+    buy = sell = 0
+    reasons = []
+    if last is not None and vwap is not None and sd and sd > 0:
+        if last <= vwap - 2 * sd:
+            buy += 2; reasons.append("价格触及 VWAP−2σ 下轨")
+        elif last <= vwap - sd:
+            buy += 1; reasons.append("价格低于 VWAP−1σ")
+        if last >= vwap + 2 * sd:
+            sell += 2; reasons.append("价格触及 VWAP+2σ 上轨")
+        elif last >= vwap + sd:
+            sell += 1; reasons.append("价格高于 VWAP+1σ")
+    if rsi is not None:
+        if rsi <= 25:
+            buy += 2; reasons.append(f"日内RSI {rsi:.0f} 超卖")
+        elif rsi <= 32:
+            buy += 1
+        if rsi >= 75:
+            sell += 2; reasons.append(f"日内RSI {rsi:.0f} 超买")
+        elif rsi >= 68:
+            sell += 1
+    if mfi is not None:
+        if mfi <= 18:
+            buy += 2; reasons.append(f"MFI {mfi:.0f}：资金流出极端（抛压衰竭区）")
+        elif mfi <= 28:
+            buy += 1; reasons.append(f"MFI {mfi:.0f}：资金持续流出")
+        if mfi >= 82:
+            sell += 2; reasons.append(f"MFI {mfi:.0f}：资金流入过热")
+        elif mfi >= 72:
+            sell += 1; reasons.append(f"MFI {mfi:.0f}：资金流入偏热")
+    zone = "观望"
+    if buy >= 3 and buy > sell:
+        zone = "T买区"
+    elif sell >= 3 and sell > buy:
+        zone = "T卖区"
+    elif buy >= 2 and buy > sell:
+        zone = "偏T买"
+    elif sell >= 2 and sell > buy:
+        zone = "偏T卖"
+    return {"t_zone": zone, "t_buy_score": buy, "t_sell_score": sell, "t_reasons": reasons[:4]}
 
 
 def detect_intraday_events(prev_state, snap, cfg, leverage=1.0):
@@ -302,6 +372,17 @@ def detect_intraday_events(prev_state, snap, cfg, leverage=1.0):
     vp = snap.get("vol_pulse")
     if vp is not None and vp >= 3.0:
         ev.append({"type": "vol_pulse", "level": "info", "text": f"放量脉冲 {vp:.1f}× 中位量"})
+
+    # 做T区位切换（进入强区才报：VWAP带/RSI/MFI 共振）
+    tz, ptz = snap.get("t_zone"), (prev_state or {}).get("t_zone")
+    if tz == "T买区" and ptz != "T买区":
+        why = "；".join(snap.get("t_reasons") or [])
+        ev.append({"type": "t_buy", "level": "good",
+                   "text": f"进入做T买回区（强度{snap.get('t_buy_score')}）：{why}"})
+    if tz == "T卖区" and ptz != "T卖区":
+        why = "；".join(snap.get("t_reasons") or [])
+        ev.append({"type": "t_sell", "level": "warn",
+                   "text": f"进入做T卖出区（强度{snap.get('t_sell_score')}）：{why}"})
 
     return ev
 
