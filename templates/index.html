@@ -4,10 +4,12 @@
 {% macro lean_class(stance) %}{% if stance in ['买入','加仓','抄底'] %}buy{% elif stance in ['减仓','逃顶','谨慎看空'] %}sell{% else %}hold{% endif %}{% endmacro %}
 {% macro conf_n(c) %}{% if c=='高' %}4{% elif c=='中' %}3{% elif c=='低' %}2{% else %}0{% endif %}{% endmacro %}
 
-{# ---- 标的卡片宏 ---- #}
-{% macro card(sym, sig, names) %}
+{# ---- 重点视图大卡片（带走势线；全站只有这里有走势线，降噪） ---- #}
+{% macro big_card(sym, sig, names, holdings) %}
 <div class="card" data-sym="{{ sym }}" onclick="location.href='{{ url_for('ticker_detail', ticker=sym) }}'">
-  <div class="ticker-row"><span class="tk">{{ sym }}</span></div>
+  <div class="ticker-row">
+    <span class="tk">{{ sym }}{% if sym in holdings %}<span class="hold-tag">持仓{% if holdings[sym] %} -{{ holdings[sym] }}%{% endif %}</span>{% endif %}</span>
+  </div>
   {% if names.get(sym) %}<div class="name">{{ names.get(sym) }}</div>{% endif %}
   <div class="px mono" data-px>—</div>
   <div class="chg mono" data-chg><span class="muted">加载中…</span></div>
@@ -16,13 +18,25 @@
 </div>
 {% endmacro %}
 
+{# ---- 分组视图单行（无走势线，信息降噪） ---- #}
+{% macro row(sym, sig, names, removable=False) %}
+<a class="row" data-sym="{{ sym }}" href="{{ url_for('ticker_detail', ticker=sym) }}">
+  <span class="r-tk">{{ sym }}</span>
+  <span class="r-name">{{ names.get(sym, '') }}</span>
+  <span class="r-px" data-px>—</span>
+  <span class="r-chg" data-chg>—</span>
+  {% if sig and sig.label %}<span class="sigtag sig-{{ sig.label }}">{{ sig.label }}</span>{% else %}<span></span>{% endif %}
+  {% if removable %}<button class="rm" title="移出自选" onclick="removeTicker(event,'{{ sym }}')">×</button>{% else %}<span></span>{% endif %}
+</a>
+{% endmacro %}
+
 {% block content %}
 
 <!-- 宏观条 -->
 <section class="macro">
   <div class="macro-head">
     <span class="lbl">MACRO · 跨市场宏观</span>
-    <span class="meta">期货 / 亚洲盘 · 涨红跌绿(中文习惯) · 隔夜个股不交易看这里</span>
+    <span class="meta">期货 / 亚洲盘 · 涨红跌绿 · 隔夜个股不交易看这里</span>
   </div>
   <div class="macro-strip" id="macro-strip">
     {% for sym in (cfg.DESK_FUTURES or []) + (cfg.DESK_ASIA or []) %}
@@ -35,51 +49,64 @@
   </div>
 </section>
 
-<!-- 看板 -->
-<section class="board">
-  <div class="col-left">
-    {% for title, syms in groups[:3] %}
-    <div class="group">
-      <div class="group-head">
-        <div class="gt"><span class="num">{{ loop.index }}</span><h2>{{ title }}</h2></div>
-        <span class="cnt">{{ syms|length }} 标的</span>
-      </div>
-      <div class="cards {{ 'c2' if syms|length <= 4 else '' }}">
-        {% for sym in syms %}{{ card(sym, latest.get(sym), names) }}{% endfor %}
-      </div>
-    </div>
+<!-- 标签切换 + 快速添加自选 -->
+<section class="tabbar">
+  <div class="tabs" id="tabs">
+    <span class="tab" data-tab="focus">★ 重点<span class="n">{{ focus|length }}</span></span>
+    {% for title, syms in groups %}
+      {% if syms or (title == '自选' and is_admin) %}
+      <span class="tab" data-tab="g{{ loop.index }}">{{ title }}<span class="n">{{ syms|length }}</span></span>
+      {% endif %}
     {% endfor %}
   </div>
-  <div class="col-right">
-    {% for title, syms in groups[3:] %}
-    <div class="group">
-      <div class="group-head">
-        <div class="gt"><span class="num">{{ loop.index + 3 }}</span><h2>{{ title }}</h2></div>
-        <span class="cnt">{{ syms|length }} 标的{% if '杠杆' in title %} · 高波动{% endif %}</span>
-      </div>
-      <div class="cards {{ 'c2' if syms|length <= 4 else '' }}">
-        {% for sym in syms %}{{ card(sym, latest.get(sym), names) }}{% endfor %}
-      </div>
-    </div>
-    {% endfor %}
-  </div>
+  {% if is_admin %}
+  <form class="quickadd" onsubmit="return addTicker(event)">
+    <input id="addTk" placeholder="输代码加自选 如 TSLA" maxlength="12" autocomplete="off">
+    <button class="btn" type="submit">+ 添加</button>
+  </form>
+  {% endif %}
 </section>
 
-<!-- 信号流 -->
+<!-- 重点视图：持仓 + 自选（默认） -->
+<section class="panel-view" id="view-focus">
+  {% if focus %}
+  <div class="focus-cards">
+    {% for sym in focus %}{{ big_card(sym, latest.get(sym), names, holdings) }}{% endfor %}
+  </div>
+  {% else %}
+  <div class="hint">
+    「重点」= 你的持仓 + 自选，现在还是空的。<br>
+    {% if is_admin %}→ 右上输入代码（如 <span class="mono">TSLA</span>）点「+ 添加」加自选；或到 <a href="{{ url_for('settings') }}">设置 → 我的持仓</a> 填持仓（AI 会按你的浮亏针对性提醒）。{% else %}请管理员登录后添加。先点上方标签看大盘/个股分组。{% endif %}
+  </div>
+  {% endif %}
+</section>
+
+<!-- 分组视图：单行行情列 -->
+{% for title, syms in groups %}
+{% if syms or (title == '自选' and is_admin) %}
+<section class="panel-view" id="view-g{{ loop.index }}" hidden>
+  {% if syms %}
+    {% for sym in syms %}{{ row(sym, latest.get(sym), names, removable=(title == '自选' and is_admin)) }}{% endfor %}
+  {% else %}
+  <div class="hint">自选还是空的——右上输入代码即可添加，添加后自动进入全天候监控。</div>
+  {% endif %}
+</section>
+{% endif %}
+{% endfor %}
+
+<!-- 信号流：默认只展开 3 条 -->
 <section class="feed-wrap">
   <div class="feed-head">
     <h2>Signal Feed · 信号流</h2>
     <span class="sub">规则驱动 + AI 多空辩论 · 倒序 · 共 {{ signals|length }} 条</span>
   </div>
   {% if not signals %}
-  <div style="padding:18px;color:var(--ink-3);font-size:13px">
-    还没有信号。{% if is_admin %}点上方「▶ 启动」开始全天候监控，或进入任一标的详情页点「AI 分析」手动跑一只。{% endif %}
-  </div>
+  <div class="hint">还没有信号。{% if is_admin %}点上方「▶ 启动」开始全天候监控，或进任一标的详情页点「AI 分析」。{% endif %}</div>
   {% endif %}
   {% for s in signals %}
   {% set ai = s.ai or {} %}
   {% set st = ai.get('stance','') %}
-  <div class="feed-item {{ 'alert' if s.label in ['逃顶预警','减仓-趋势破位','开盘前预警'] }}">
+  <div class="feed-item {{ 'alert' if s.label in ['逃顶预警','减仓-趋势破位','开盘前预警'] }}" {% if loop.index > 3 %}hidden data-extra{% endif %}>
     <div class="fi-left">
       <div class="fi-tk"><a href="{{ url_for('ticker_detail', ticker=s.ticker) }}">{{ s.ticker }}</a></div>
       <div class="fi-name">{{ names.get(s.ticker,'') }}{% if s.leverage and s.leverage > 1 %} · {{ s.leverage|int }}x杠杆{% endif %}</div>
@@ -107,6 +134,11 @@
     </div>
   </div>
   {% endfor %}
+  {% if signals|length > 3 %}
+  <div style="padding:10px 18px">
+    <button class="btn" id="feedMore" onclick="toggleFeed()">▾ 展开全部 {{ signals|length }} 条</button>
+  </div>
+  {% endif %}
 </section>
 
 {% endblock %}
@@ -116,6 +148,56 @@
 function arrowSpan(pct){ return (pct>=0?'▲':'▼'); }
 function colorClass(pct){ return pct>=0?'up':'down'; }
 
+/* ---- 标签切换 ---- */
+function showTab(id){
+  if(!document.getElementById('view-'+id)) id='focus';
+  document.querySelectorAll('.panel-view').forEach(function(p){ p.hidden = (p.id !== 'view-'+id); });
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.dataset.tab===id); });
+  try{ localStorage.setItem('deskTab', id); }catch(e){}
+}
+document.getElementById('tabs').addEventListener('click', function(e){
+  var t = e.target.closest('.tab'); if(t) showTab(t.dataset.tab);
+});
+var hasFocus = {{ 'true' if focus else 'false' }};
+var saved = null; try{ saved = localStorage.getItem('deskTab'); }catch(e){}
+showTab(saved || (hasFocus ? 'focus' : 'g2'));
+
+/* ---- 信号流展开/收起 ---- */
+function toggleFeed(){
+  var extras = document.querySelectorAll('[data-extra]');
+  var btn = document.getElementById('feedMore');
+  var opening = extras.length && extras[0].hidden;
+  extras.forEach(function(x){ x.hidden = !opening; });
+  if(btn) btn.textContent = opening ? '▴ 收起' : '▾ 展开全部 {{ signals|length }} 条';
+}
+
+/* ---- 自选增删 ---- */
+async function addTicker(e){
+  e.preventDefault();
+  var inp = document.getElementById('addTk');
+  var v = (inp.value || '').trim().toUpperCase();
+  if(!v) return false;
+  var btn = e.target.querySelector('button'); btn.disabled = true; btn.textContent = '验证中…';
+  try{
+    var r = await fetch('/api/watch/add', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ticker:v})});
+    var d = await r.json();
+    if(d.ok){ try{ localStorage.setItem('deskTab','focus'); }catch(e2){} location.reload(); return false; }
+    alert(d.msg || '添加失败');
+  }catch(err){ alert('请求失败：' + err); }
+  btn.disabled = false; btn.textContent = '+ 添加';
+  return false;
+}
+async function removeTicker(ev, t){
+  ev.preventDefault(); ev.stopPropagation();
+  if(!confirm('把 ' + t + ' 移出自选？')) return;
+  try{
+    var r = await fetch('/api/watch/remove', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ticker:t})});
+    var d = await r.json();
+    if(d.ok) location.reload(); else alert(d.msg || '失败');
+  }catch(err){ alert('请求失败：' + err); }
+}
+
+/* ---- 行情刷新（卡片 + 行 + 宏观条共用 data-sym） ---- */
 async function refreshQuotes(){
   try{
     var data = await (await fetch('/api/quotes')).json();
@@ -126,22 +208,24 @@ async function refreshQuotes(){
       if(px) px.textContent = d.price;
       if(chg){
         var up = d.change_pct >= 0;
-        chg.className = 'chg mono ' + colorClass(d.change_pct);
-        chg.innerHTML = '<span class="arw">'+arrowSpan(d.change_pct)+'</span> '+(up?'+':'')+d.change+'<span class="sep">|</span>'+(up?'+':'')+d.change_pct+'%';
+        var base = chg.classList.contains('r-chg') ? 'r-chg mono ' : 'chg mono ';
+        chg.className = base + colorClass(d.change_pct);
+        chg.innerHTML = '<span class="arw">'+arrowSpan(d.change_pct)+'</span> '+(up?'+':'')+d.change+' '+(up?'+':'')+d.change_pct+'%';
         if(el.classList.contains('card')){ el.classList.toggle('is-up',up); el.classList.toggle('is-down',!up); }
       }
     });
   }catch(e){}
 }
+/* 走势线只画重点区（降噪） */
 async function refreshSparks(){
   try{
     var s = await (await fetch('/api/spark')).json();
-    document.querySelectorAll('.card[data-sym]').forEach(function(el){
-      var sym=el.getAttribute('data-sym'); var arr=s[sym]; var svg=el.querySelector('[data-spark]'); if(!arr||!svg) return;
-      var lo=Math.min.apply(null,arr), hi=Math.max.apply(null,arr), rng=(hi-lo)||1;
-      var pts=arr.map(function(v,i){ var x=i/(arr.length-1)*120; var y=28-(v-lo)/rng*26; return x.toFixed(1)+','+y.toFixed(1); }).join(' ');
-      var col = arr[arr.length-1]>=arr[0] ? 'var(--up)' : 'var(--down)';
-      svg.innerHTML='<polyline fill="none" stroke="'+col+'" stroke-width="1.5" points="'+pts+'"/>';
+    document.querySelectorAll('#view-focus .card[data-sym]').forEach(function(el){
+      var sym = el.getAttribute('data-sym'); var arr = s[sym]; var svg = el.querySelector('[data-spark]'); if(!arr||!svg) return;
+      var lo = Math.min.apply(null,arr), hi = Math.max.apply(null,arr), rng = (hi-lo)||1;
+      var pts = arr.map(function(v,i){ var x=i/(arr.length-1)*120; var y=28-(v-lo)/rng*26; return x.toFixed(1)+','+y.toFixed(1); }).join(' ');
+      var col = arr[arr.length-1] >= arr[0] ? 'var(--up)' : 'var(--down)';
+      svg.innerHTML = '<polyline fill="none" stroke="'+col+'" stroke-width="1.5" points="'+pts+'"/>';
     });
   }catch(e){}
 }
@@ -150,11 +234,11 @@ async function refreshMacro(){
     var m = await (await fetch('/api/macro')).json();
     var snap = m.snap || {}; var all = Object.assign({}, snap.futures||{}, snap.asia||{});
     document.querySelectorAll('#macro-strip .macro-cell').forEach(function(el){
-      var sym=el.getAttribute('data-sym'); var d=all[sym]; if(!d) return;
-      el.querySelector('[data-px]').textContent=d.price;
-      var chg=el.querySelector('[data-chg]'); var up=d.change_pct>=0;
-      chg.className='chg mono '+colorClass(d.change_pct);
-      chg.innerHTML='<span class="arw">'+arrowSpan(d.change_pct)+'</span> '+(up?'+':'')+d.change+' &nbsp;'+(up?'+':'')+d.change_pct+'%';
+      var sym = el.getAttribute('data-sym'); var d = all[sym]; if(!d) return;
+      el.querySelector('[data-px]').textContent = d.price;
+      var chg = el.querySelector('[data-chg]'); var up = d.change_pct >= 0;
+      chg.className = 'chg mono ' + colorClass(d.change_pct);
+      chg.innerHTML = '<span class="arw">'+arrowSpan(d.change_pct)+'</span> '+(up?'+':'')+d.change+' &nbsp;'+(up?'+':'')+d.change_pct+'%';
     });
   }catch(e){}
 }

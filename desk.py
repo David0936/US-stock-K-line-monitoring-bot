@@ -60,11 +60,12 @@ class Desk:
         self.config = cfg
         self._last_check_bj = None   # 复盘判定重置，避免跨配置漏判
 
-    # ---- 关注列表（做完整信号+AI 的标的：大盘+个股+杠杆ETF）----
+    # ---- 关注列表（做完整信号+AI 的标的：大盘+个股+杠杆ETF+自选）----
     def _watchlist(self):
         groups = [self.config.get("DESK_INDICES") or [],
                   self.config.get("DESK_TICKERS") or [],
-                  self.config.get("DESK_LEVERAGED") or []]
+                  self.config.get("DESK_LEVERAGED") or [],
+                  self.config.get("DESK_CUSTOM") or []]
         seen, out = set(), []
         for g in groups:
             for t in g:

@@ -106,6 +106,33 @@
   .sig-wait,.sig-观望-中性{background:var(--ink);color:var(--paper)}
   .sig-risk{background:var(--warn);color:#fff;border-color:var(--warn)}
 
+  /* tab bar + quick add */
+  .tabbar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:0 18px;border-bottom:1px solid var(--rule);background:var(--paper-2);flex-wrap:wrap}
+  .tabs{display:flex;flex-wrap:wrap}
+  .tab{cursor:pointer;font-size:12px;font-weight:800;letter-spacing:0.04em;padding:10px 14px;border-right:1px solid var(--rule-soft);color:var(--ink-3);text-transform:uppercase;user-select:none}
+  .tab:first-child{border-left:1px solid var(--rule-soft)}
+  .tab.active{background:var(--ink);color:var(--paper)}
+  .tab .n{font-family:'IBM Plex Mono',monospace;font-size:10px;margin-left:4px;opacity:.7}
+  .quickadd{display:flex;gap:6px;padding:6px 0;align-items:center}
+  .quickadd input{font-family:'IBM Plex Mono',monospace;font-size:12px;padding:5px 9px;border:1px solid var(--rule);background:var(--paper-3);width:180px;color:var(--ink)}
+  .hint{padding:22px 18px;color:var(--ink-3);font-size:13px;line-height:1.6}
+
+  /* 重点视图大卡片 */
+  .focus-cards{display:grid;grid-template-columns:repeat(4,1fr)}
+  .focus-cards .card .px{font-size:23px}
+  .hold-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;color:var(--warn);border:1px solid var(--warn);padding:1px 5px;margin-left:5px}
+
+  /* 分组视图：单行行情列（信息降噪：无走势线） */
+  .row{display:grid;grid-template-columns:120px 1fr 120px 150px auto auto;gap:12px;align-items:center;padding:10px 18px;border-bottom:1px solid var(--rule-soft);color:var(--ink);text-decoration:none}
+  .row:hover{background:var(--paper-3);text-decoration:none}
+  .r-tk{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:14px}
+  .r-name{font-size:11px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .r-px{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:14px;text-align:right}
+  .r-chg{font-family:'IBM Plex Mono',monospace;font-size:12.5px;font-weight:600;text-align:right}
+  .row .sigtag{margin-top:0}
+  .rm{border:1px solid var(--rule);background:var(--paper-3);cursor:pointer;font-size:11px;line-height:1;padding:4px 8px;color:var(--ink-3)}
+  .rm:hover{background:var(--up);color:#fff;border-color:var(--up)}
+
   /* signal feed */
   .feed-wrap{border-bottom:1px solid var(--rule)}
   .feed-head{display:flex;align-items:baseline;justify-content:space-between;padding:10px 18px;border-bottom:3px double var(--rule);background:var(--paper-2)}
@@ -165,11 +192,15 @@
     .macro-strip{grid-template-columns:repeat(3,1fr)} .macro-cell:nth-child(3n){border-right:none}
     .board{grid-template-columns:1fr} .col-left{border-right:none;border-bottom:1px solid var(--rule)}
     .grid4{grid-template-columns:1fr 1fr}
+    .focus-cards{grid-template-columns:repeat(3,1fr)}
   }
   @media(max-width:720px){
     .statusbar{grid-template-columns:1fr} .stat{border-right:none;border-bottom:1px solid var(--rule-soft)}
     .macro-strip{grid-template-columns:repeat(2,1fr)} .macro-cell:nth-child(2n){border-right:none}
     .cards,.cards.c2{grid-template-columns:1fr 1fr} .card:nth-child(3n){border-right:1px solid var(--rule-soft)} .card:nth-child(2n){border-right:none}
+    .focus-cards{grid-template-columns:1fr 1fr}
+    .row{grid-template-columns:96px 1fr 110px auto;gap:8px}
+    .r-name,.row .sigtag{display:none}
     .feed-item{grid-template-columns:1fr;gap:10px} .fi-right{border-left:none;padding-left:0;border-top:1px solid var(--rule-soft);padding-top:8px}
     .wrap{border-left:none;border-right:none} .grid2,.grid4{grid-template-columns:1fr}
   }

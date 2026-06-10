@@ -11,6 +11,8 @@
     <input name="DESK_TICKERS" value="{{ cfg.DESK_TICKERS | join(' ') }}" placeholder="NVDA AMD TSM AVGO MU SMCI">
     <label>杠杆 ETF</label>
     <input name="DESK_LEVERAGED" value="{{ cfg.DESK_LEVERAGED | join(' ') }}" placeholder="SOXL SOXS USD KORU">
+    <label>自选（主页右上可快速添加，同样进监控）</label>
+    <input name="DESK_CUSTOM" value="{{ cfg.DESK_CUSTOM | join(' ') }}" placeholder="TSLA PLTR">
     <div class="grid2">
       <div><label>指数期货（隔夜方向）</label>
         <input name="DESK_FUTURES" value="{{ cfg.DESK_FUTURES | join(' ') }}" placeholder="ES=F NQ=F"></div>

@@ -46,6 +46,8 @@ DEFAULTS = {
     "DESK_INDICES": ["^GSPC", "^IXIC", "QQQ"],
     "DESK_TICKERS": ["NVDA", "AMD", "TSM", "AVGO", "MU", "SMCI"],
     "DESK_LEVERAGED": ["SOXL", "SOXS", "USD", "KORU"],
+    "DESK_CUSTOM": [],             # 自选：主页输代码快速添加，同样进监控
+
     "DESK_FUTURES": ["ES=F", "NQ=F"],
     "DESK_ASIA": ["^KS11", "^N225", "^HSI", "000001.SS"],
     "UNDERLYING_MAP": {},          # {ETF: 挂钩市场代码}，覆盖 macro 默认映射
@@ -191,20 +193,29 @@ def logout():
 
 @app.route("/")
 def index():
-    """盯盘台：分组(大盘/期货/亚洲/个股/杠杆ETF)现价/涨跌/信号 + 最新信号时间线（公开可看）。"""
+    """盯盘台：重点(持仓+自选)默认视图 + 分组标签切换 + 信号流（公开可看）。"""
     cfg = load_config()
     groups = [
+        ("自选", cfg.get("DESK_CUSTOM") or []),
         ("大盘指数", cfg.get("DESK_INDICES") or []),
         ("指数期货", cfg.get("DESK_FUTURES") or []),
         ("亚洲股市", cfg.get("DESK_ASIA") or []),
         ("个股", cfg.get("DESK_TICKERS") or []),
         ("杠杆 ETF", cfg.get("DESK_LEVERAGED") or []),
     ]
-    all_syms = [t for _, g in groups for t in g]
+    # 重点 = 持仓 + 自选（去重保序）：默认视图只看这些，解决信息过载
+    focus, seen = [], set()
+    for t in list((cfg.get("HOLDINGS") or {}).keys()) + (cfg.get("DESK_CUSTOM") or []):
+        t = (t or "").strip()
+        if t and t not in seen:
+            seen.add(t)
+            focus.append(t)
+    all_syms = list({t for _, g in groups for t in g} | set(focus))
     latest = {t: store.latest_by_ticker(t) for t in all_syms}
     return render_template(
         "index.html",
-        cfg=cfg, groups=groups, latest=latest, names=macro_mod.NAMES,
+        cfg=cfg, groups=groups, focus=focus, latest=latest, names=macro_mod.NAMES,
+        holdings=cfg.get("HOLDINGS") or {},
         signals=store.all()[:50],
         status=desk_status, session_label=market.SESSION_LABEL.get(market.session_now(), ""),
         is_admin=bool(session.get("auth")),
@@ -256,6 +267,7 @@ def settings():
         cfg["DESK_INDICES"] = _tickers(f.get("DESK_INDICES", ""))
         cfg["DESK_TICKERS"] = _tickers(f.get("DESK_TICKERS", ""))
         cfg["DESK_LEVERAGED"] = _tickers(f.get("DESK_LEVERAGED", ""))
+        cfg["DESK_CUSTOM"] = _tickers(f.get("DESK_CUSTOM", ""))
         cfg["DESK_FUTURES"] = _tickers(f.get("DESK_FUTURES", ""))
         cfg["DESK_ASIA"] = _tickers(f.get("DESK_ASIA", ""))
         cfg["UNDERLYING_MAP"] = _map(f.get("UNDERLYING_MAP", ""))
@@ -326,12 +338,56 @@ def settings():
 # ---- API ----
 def _all_symbols(cfg):
     out, seen = [], set()
-    for k in ("DESK_INDICES", "DESK_FUTURES", "DESK_ASIA", "DESK_TICKERS", "DESK_LEVERAGED"):
+    for k in ("DESK_INDICES", "DESK_FUTURES", "DESK_ASIA", "DESK_TICKERS",
+              "DESK_LEVERAGED", "DESK_CUSTOM"):
         for t in cfg.get(k) or []:
             if t and t not in seen:
                 seen.add(t)
                 out.append(t)
     return out
+
+
+@app.route("/api/watch/add", methods=["POST"])
+@login_required
+def api_watch_add():
+    """主页快速添加自选：校验代码格式 + 真实行情可取后写入 DESK_CUSTOM，热生效到监控。"""
+    data = request.get_json(silent=True) or {}
+    t = (data.get("ticker") or request.form.get("ticker", "")).strip().upper().replace(" ", "")
+    if not valid_ticker(t):
+        return jsonify(ok=False, msg="代码格式不对（美股如 TSLA，指数加^，期货加=F，A股如 600519.SS）"), 400
+    cfg = load_config()
+    if t in _all_symbols(cfg):
+        return jsonify(ok=False, msg=f"{t} 已在关注列表里"), 400
+    q = market.quote(t)
+    if not q:
+        return jsonify(ok=False, msg=f"取不到 {t} 的行情，请检查代码拼写"), 400
+    custom = cfg.get("DESK_CUSTOM") or []
+    custom.append(t)
+    cfg["DESK_CUSTOM"] = custom
+    save_config(cfg)
+    if desk_instance and desk_status.get("running"):
+        try:
+            desk_instance.reload_config(cfg)
+        except Exception:
+            pass
+    return jsonify(ok=True, ticker=t, price=q["price"], change_pct=q["change_pct"])
+
+
+@app.route("/api/watch/remove", methods=["POST"])
+@login_required
+def api_watch_remove():
+    data = request.get_json(silent=True) or {}
+    t = (data.get("ticker") or request.form.get("ticker", "")).strip().upper()
+    cfg = load_config()
+    custom = [x for x in (cfg.get("DESK_CUSTOM") or []) if x != t]
+    cfg["DESK_CUSTOM"] = custom
+    save_config(cfg)
+    if desk_instance and desk_status.get("running"):
+        try:
+            desk_instance.reload_config(cfg)
+        except Exception:
+            pass
+    return jsonify(ok=True, ticker=t)
 
 
 @app.route("/api/quotes")
