@@ -1,0 +1,7 @@
+flask>=2.3.0
+requests>=2.31.0
+openai>=1.0.0
+yfinance>=0.2.40
+pandas>=2.0.0
+tzdata>=2024.1
+# 前端图表用 TradingView lightweight-charts，走 CDN，无需 pip

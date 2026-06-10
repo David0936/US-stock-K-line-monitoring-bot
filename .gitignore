@@ -1,0 +1,10 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+config.json
+data/
+.DS_Store
+.claude/
+design-drafts/
+*.log

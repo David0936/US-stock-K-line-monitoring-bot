@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}{{ ticker }} · 盯盘详情{% endblock %}
+
+{% macro lean_class(stance) %}{% if stance in ['买入','加仓','抄底'] %}buy{% elif stance in ['减仓','逃顶','谨慎看空'] %}sell{% else %}hold{% endif %}{% endmacro %}
+
+{% block content %}
+
+<!-- 标的头 -->
+<section class="group-head" style="border-bottom:3px double var(--rule);padding:14px 18px" data-sym="{{ ticker }}">
+  <div class="gt" style="gap:14px">
+    <span class="tk mono" style="font-size:26px;font-weight:700">{{ ticker }}</span>
+    <span class="px mono" data-px style="font-size:26px;font-weight:700">—</span>
+    <span class="chg mono" data-chg style="font-size:15px">加载中…</span>
+  </div>
+  {% if is_admin %}
+  <button class="btn" onclick="analyze('{{ ticker }}',this)">🤖 立即 AI 分析</button>
+  {% endif %}
+</section>
+
+<!-- 分钟 K 线 -->
+<section>
+  <div class="sec-head">
+    <h3>K 线 · {{ ticker }}</h3>
+    <div class="tf" id="tf">
+      <span class="pill active" data-iv="1m">1m</span>
+      <span class="pill" data-iv="5m">5m</span>
+      <span class="pill" data-iv="15m">15m</span>
+      <span class="pill" data-iv="1d">1D</span>
+    </div>
+  </div>
+  <div id="chart"></div>
+  <div style="padding:6px 18px;font-size:10.5px;color:var(--ink-3)" class="mono" id="chart-note">分钟线含盘前盘后(美东 04:00–20:00)；隔夜个股不交易</div>
+</section>
+
+<section class="board" style="grid-template-columns:1fr 1fr">
+  <!-- 信号史 -->
+  <div class="col-left">
+    <div class="group-head"><div class="gt"><h2>信号史 · Signals</h2></div><span class="cnt">{{ signals|length }} 条</span></div>
+    {% if not signals %}<div style="padding:16px;color:var(--ink-3);font-size:13px">暂无信号{% if is_admin %}，点右上「AI 分析」生成一条{% endif %}。</div>{% endif %}
+    {% for s in signals %}
+    {% set ai = s.ai or {} %}{% set st = ai.get('stance','') %}
+    <div style="padding:13px 18px;border-bottom:1px solid var(--rule-soft)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline">
+        <div class="fi-tags" style="margin:0">
+          {% if s.label %}<span class="sigtag sig-{{ s.label }}" style="margin-top:0">{{ s.label }}</span>{% endif %}
+          {% if st %}<span class="lean {{ lean_class(st) }}"><span class="mk"></span>{{ st }}</span>{% endif %}
+        </div>
+        <span class="fi-time mono" style="margin:0">{{ s.ts_bj or (s.ts | beijing) }}{% if s.session %} · {{ s.session }}{% endif %}</span>
+      </div>
+      {% if s.events %}<div class="subline">📡 {{ s.events | map(attribute='text') | join('；') }}</div>{% endif %}
+      {% set it = s.intraday or {} %}
+      {% if it %}<div class="subline mono">日内 距开盘 {{ it.pct_from_open }}% · VWAP {{ it.vwap }} · 近15分 {{ it.vel_15m }}%</div>{% endif %}
+      {% if ai.get('summary') %}<div class="judge" style="margin-top:7px">{{ ai.summary }}</div>{% endif %}
+      {% if ai.get('bull') %}<div class="subline" style="color:var(--up)">🐂 多头：{{ ai.bull }}</div>{% endif %}
+      {% if ai.get('bear') %}<div class="subline" style="color:var(--down)">🐻 空头：{{ ai.bear }}</div>{% endif %}
+      {% if ai.get('levels') %}<div class="subline mono">🎯 {{ ai.levels.replace('\n','　') }}</div>{% endif %}
+      {% if ai.get('risk') %}<div class="subline">⚠️ {{ ai.risk }}</div>{% endif %}
+      {% if ai.get('tip') %}<div class="subline">💡 {{ ai.tip }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- 相关新闻 -->
+  <div class="col-right">
+    <div class="group-head"><div class="gt"><h2>相关新闻 · News</h2></div><span class="cnt">{{ news|length }} 条</span></div>
+    {% if not news %}<div style="padding:16px;color:var(--ink-3);font-size:13px">暂无新闻。</div>{% endif %}
+    {% for n in news %}
+    <div style="padding:12px 18px;border-bottom:1px solid var(--rule-soft)">
+      {% if n.link and (n.link.startswith('http://') or n.link.startswith('https://')) %}
+      <a href="{{ n.link }}" target="_blank" rel="noopener">{{ n.title }}</a>
+      {% else %}<span>{{ n.title }}</span>{% endif %}
+      <div class="fi-time mono" style="margin-top:4px">{{ n.publisher }}　{{ n.ts | beijing }}</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+var chart, series, curIv='1m';
+function initChart(){
+  var el=document.getElementById('chart');
+  chart=LightweightCharts.createChart(el,{
+    layout:{background:{color:'#FCF7F1'},textColor:'#3A332E',fontFamily:'IBM Plex Mono, monospace'},
+    grid:{vertLines:{color:'#D8C7B8'},horzLines:{color:'#D8C7B8'}},
+    rightPriceScale:{borderColor:'#0A0A0A'},timeScale:{borderColor:'#0A0A0A',timeVisible:true,secondsVisible:false},
+    crosshair:{mode:0}, autoSize:true,
+  });
+  series=chart.addCandlestickSeries({upColor:'#FF433D',downColor:'#00A33E',borderUpColor:'#FF433D',borderDownColor:'#00A33E',wickUpColor:'#FF433D',wickDownColor:'#00A33E'});
+  loadChart('1m');
+}
+async function loadChart(iv){
+  curIv=iv;
+  try{
+    var r=await (await fetch('/api/ohlc/{{ ticker }}?interval='+iv)).json();
+    var bars=(r.bars||[]).map(function(b){ return {time:b.t,open:b.o,high:b.h,low:b.l,close:b.c}; });
+    series.setData(bars);
+    chart.timeScale().fitContent();
+    document.getElementById('chart-note').textContent = bars.length? (iv+' · '+bars.length+' 根K线'+(iv.endsWith('m')?' · 含盘前盘后(美东04:00–20:00)':'')) : '该周期暂无数据(指数/隔夜可能无分钟线)';
+  }catch(e){ document.getElementById('chart-note').textContent='K线加载失败：'+e; }
+}
+document.getElementById('tf').addEventListener('click',function(e){
+  var p=e.target.closest('.pill'); if(!p) return;
+  document.querySelectorAll('#tf .pill').forEach(function(x){x.classList.remove('active')}); p.classList.add('active');
+  loadChart(p.getAttribute('data-iv'));
+});
+
+async function refreshQuote(){
+  try{
+    var data=await (await fetch('/api/quotes')).json(); var d=(data.quotes||{})['{{ ticker }}']; if(!d) return;
+    document.querySelector('[data-px]').textContent=d.price;
+    var chg=document.querySelector('[data-chg]'); var up=d.change_pct>=0;
+    chg.className='chg mono '+(up?'up':'down');
+    chg.innerHTML='<span class="arw">'+(up?'▲':'▼')+'</span> '+(up?'+':'')+d.change+' ('+(up?'+':'')+d.change_pct+'%)';
+  }catch(e){}
+}
+async function analyze(t,btn){
+  btn.disabled=true; btn.textContent='分析中…';
+  try{ var d=await (await fetch('/api/analyze/'+encodeURIComponent(t),{method:'POST'})).json();
+    if(d.ok){ location.reload(); } else { alert('失败：'+d.msg); btn.disabled=false; btn.textContent='🤖 立即 AI 分析'; }
+  }catch(e){ alert('请求失败：'+e); btn.disabled=false; btn.textContent='🤖 立即 AI 分析'; }
+}
+if(window.LightweightCharts){ initChart(); } else { window.addEventListener('load',initChart); }
+refreshQuote(); setInterval(refreshQuote,60000); setInterval(function(){loadChart(curIv)},60000);
+</script>
+{% endblock %}

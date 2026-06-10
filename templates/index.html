@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{# ---- helpers ---- #}
+{% macro lean_class(stance) %}{% if stance in ['买入','加仓','抄底'] %}buy{% elif stance in ['减仓','逃顶','谨慎看空'] %}sell{% else %}hold{% endif %}{% endmacro %}
+{% macro conf_n(c) %}{% if c=='高' %}4{% elif c=='中' %}3{% elif c=='低' %}2{% else %}0{% endif %}{% endmacro %}
+
+{# ---- 标的卡片宏 ---- #}
+{% macro card(sym, sig, names) %}
+<div class="card" data-sym="{{ sym }}" onclick="location.href='{{ url_for('ticker_detail', ticker=sym) }}'">
+  <div class="ticker-row"><span class="tk">{{ sym }}</span></div>
+  {% if names.get(sym) %}<div class="name">{{ names.get(sym) }}</div>{% endif %}
+  <div class="px mono" data-px>—</div>
+  <div class="chg mono" data-chg><span class="muted">加载中…</span></div>
+  <svg class="spark" data-spark viewBox="0 0 120 30" preserveAspectRatio="none"></svg>
+  {% if sig and sig.label %}<span class="sigtag sig-{{ sig.label }}">{{ sig.label }}</span>{% endif %}
+</div>
+{% endmacro %}
+
+{% block content %}
+
+<!-- 宏观条 -->
+<section class="macro">
+  <div class="macro-head">
+    <span class="lbl">MACRO · 跨市场宏观</span>
+    <span class="meta">期货 / 亚洲盘 · 涨红跌绿(中文习惯) · 隔夜个股不交易看这里</span>
+  </div>
+  <div class="macro-strip" id="macro-strip">
+    {% for sym in (cfg.DESK_FUTURES or []) + (cfg.DESK_ASIA or []) %}
+    <div class="macro-cell" data-sym="{{ sym }}">
+      <div class="sym">{{ sym }} <span class="rg">{{ names.get(sym, '') }}</span></div>
+      <div class="px mono" data-px>—</div>
+      <div class="chg mono" data-chg>—</div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- 看板 -->
+<section class="board">
+  <div class="col-left">
+    {% for title, syms in groups[:3] %}
+    <div class="group">
+      <div class="group-head">
+        <div class="gt"><span class="num">{{ loop.index }}</span><h2>{{ title }}</h2></div>
+        <span class="cnt">{{ syms|length }} 标的</span>
+      </div>
+      <div class="cards {{ 'c2' if syms|length <= 4 else '' }}">
+        {% for sym in syms %}{{ card(sym, latest.get(sym), names) }}{% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="col-right">
+    {% for title, syms in groups[3:] %}
+    <div class="group">
+      <div class="group-head">
+        <div class="gt"><span class="num">{{ loop.index + 3 }}</span><h2>{{ title }}</h2></div>
+        <span class="cnt">{{ syms|length }} 标的{% if '杠杆' in title %} · 高波动{% endif %}</span>
+      </div>
+      <div class="cards {{ 'c2' if syms|length <= 4 else '' }}">
+        {% for sym in syms %}{{ card(sym, latest.get(sym), names) }}{% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<!-- 信号流 -->
+<section class="feed-wrap">
+  <div class="feed-head">
+    <h2>Signal Feed · 信号流</h2>
+    <span class="sub">规则驱动 + AI 多空辩论 · 倒序 · 共 {{ signals|length }} 条</span>
+  </div>
+  {% if not signals %}
+  <div style="padding:18px;color:var(--ink-3);font-size:13px">
+    还没有信号。{% if is_admin %}点上方「▶ 启动」开始全天候监控，或进入任一标的详情页点「AI 分析」手动跑一只。{% endif %}
+  </div>
+  {% endif %}
+  {% for s in signals %}
+  {% set ai = s.ai or {} %}
+  {% set st = ai.get('stance','') %}
+  <div class="feed-item {{ 'alert' if s.label in ['逃顶预警','减仓-趋势破位','开盘前预警'] }}">
+    <div class="fi-left">
+      <div class="fi-tk"><a href="{{ url_for('ticker_detail', ticker=s.ticker) }}">{{ s.ticker }}</a></div>
+      <div class="fi-name">{{ names.get(s.ticker,'') }}{% if s.leverage and s.leverage > 1 %} · {{ s.leverage|int }}x杠杆{% endif %}</div>
+      <div class="fi-time mono">{{ s.ts_bj or (s.ts | beijing) }}{% if s.session %} · {{ s.session }}{% endif %}</div>
+    </div>
+    <div class="fi-mid">
+      <div class="fi-tags">
+        {% if s.label %}<span class="sigtag sig-{{ s.label }}" style="margin-top:0">{{ s.label }}</span>{% endif %}
+        {% if st %}<span class="lean {{ lean_class(st) }}"><span class="mk"></span>{{ st }}</span>{% endif %}
+      </div>
+      {% if s.events %}<div class="subline">📡 {{ s.events | map(attribute='text') | join('；') }}</div>{% endif %}
+      {% if ai.get('summary') %}<div class="judge">{{ ai.summary }}</div>{% endif %}
+      {% if ai.get('confidence') %}
+      <div class="conf"><span class="cl">置信 {{ ai.confidence }}</span>
+        {% set n = conf_n(ai.confidence)|int %}
+        {% for i in range(5) %}<span class="cb {{ 'on ' + lean_class(st) if i < n }}"></span>{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    <div class="fi-right">
+      <div class="kk">关键位 · Levels</div>
+      {% if ai.get('levels') %}
+        {% for line in ai.levels.split('\n') %}{% if line.strip() %}<div class="lvl">{{ line.strip() }}</div>{% endif %}{% endfor %}
+      {% else %}<div class="lvl">—</div>{% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function arrowSpan(pct){ return (pct>=0?'▲':'▼'); }
+function colorClass(pct){ return pct>=0?'up':'down'; }
+
+async function refreshQuotes(){
+  try{
+    var data = await (await fetch('/api/quotes')).json();
+    var q = data.quotes || {};
+    document.querySelectorAll('[data-sym]').forEach(function(el){
+      var sym = el.getAttribute('data-sym'); var d = q[sym]; if(!d) return;
+      var px = el.querySelector('[data-px]'); var chg = el.querySelector('[data-chg]');
+      if(px) px.textContent = d.price;
+      if(chg){
+        var up = d.change_pct >= 0;
+        chg.className = 'chg mono ' + colorClass(d.change_pct);
+        chg.innerHTML = '<span class="arw">'+arrowSpan(d.change_pct)+'</span> '+(up?'+':'')+d.change+'<span class="sep">|</span>'+(up?'+':'')+d.change_pct+'%';
+        if(el.classList.contains('card')){ el.classList.toggle('is-up',up); el.classList.toggle('is-down',!up); }
+      }
+    });
+  }catch(e){}
+}
+async function refreshSparks(){
+  try{
+    var s = await (await fetch('/api/spark')).json();
+    document.querySelectorAll('.card[data-sym]').forEach(function(el){
+      var sym=el.getAttribute('data-sym'); var arr=s[sym]; var svg=el.querySelector('[data-spark]'); if(!arr||!svg) return;
+      var lo=Math.min.apply(null,arr), hi=Math.max.apply(null,arr), rng=(hi-lo)||1;
+      var pts=arr.map(function(v,i){ var x=i/(arr.length-1)*120; var y=28-(v-lo)/rng*26; return x.toFixed(1)+','+y.toFixed(1); }).join(' ');
+      var col = arr[arr.length-1]>=arr[0] ? 'var(--up)' : 'var(--down)';
+      svg.innerHTML='<polyline fill="none" stroke="'+col+'" stroke-width="1.5" points="'+pts+'"/>';
+    });
+  }catch(e){}
+}
+async function refreshMacro(){
+  try{
+    var m = await (await fetch('/api/macro')).json();
+    var snap = m.snap || {}; var all = Object.assign({}, snap.futures||{}, snap.asia||{});
+    document.querySelectorAll('#macro-strip .macro-cell').forEach(function(el){
+      var sym=el.getAttribute('data-sym'); var d=all[sym]; if(!d) return;
+      el.querySelector('[data-px]').textContent=d.price;
+      var chg=el.querySelector('[data-chg]'); var up=d.change_pct>=0;
+      chg.className='chg mono '+colorClass(d.change_pct);
+      chg.innerHTML='<span class="arw">'+arrowSpan(d.change_pct)+'</span> '+(up?'+':'')+d.change+' &nbsp;'+(up?'+':'')+d.change_pct+'%';
+    });
+  }catch(e){}
+}
+refreshQuotes(); refreshMacro(); refreshSparks();
+setInterval(refreshQuotes, 60000);
+setInterval(refreshMacro, 60000);
+</script>
+{% endblock %}

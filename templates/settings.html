@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}设置 · 美股盯盘台{% endblock %}
+{% block content %}
+<form method="post">
+
+  <div class="panel">
+    <h3>关注标的（空格或逗号分隔）</h3>
+    <label>大盘指数</label>
+    <input name="DESK_INDICES" value="{{ cfg.DESK_INDICES | join(' ') }}" placeholder="^GSPC ^IXIC QQQ">
+    <label>个股</label>
+    <input name="DESK_TICKERS" value="{{ cfg.DESK_TICKERS | join(' ') }}" placeholder="NVDA AMD TSM AVGO MU SMCI">
+    <label>杠杆 ETF</label>
+    <input name="DESK_LEVERAGED" value="{{ cfg.DESK_LEVERAGED | join(' ') }}" placeholder="SOXL SOXS USD KORU">
+    <div class="grid2">
+      <div><label>指数期货（隔夜方向）</label>
+        <input name="DESK_FUTURES" value="{{ cfg.DESK_FUTURES | join(' ') }}" placeholder="ES=F NQ=F"></div>
+      <div><label>亚洲股市（隔夜代理）</label>
+        <input name="DESK_ASIA" value="{{ cfg.DESK_ASIA | join(' ') }}" placeholder="^KS11 ^N225 ^HSI 000001.SS"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>杠杆 ETF 挂钩市场（每行 ETF=挂钩代码）</h3>
+    <label>用于隔夜"开盘前预警"：当挂钩市场大动，提前预警该 ETF（KORU 默认挂钩 ^KS11/韩国，SOXL 挂钩 ^SOX/费半）。留空用内置默认。</label>
+    <textarea name="UNDERLYING_MAP" rows="3" placeholder="KORU=^KS11&#10;SOXL=^SOX">{{ underlying_text }}</textarea>
+  </div>
+
+  <div class="panel">
+    <h3>我的持仓（用于 AI 针对性提醒）</h3>
+    <label>每行 <code>代码 浮亏百分比</code>，例如 <code>KORU 35</code>（亏35%）；只填代码也行。</label>
+    <textarea name="HOLDINGS" rows="3" placeholder="KORU 35&#10;SOXL 20">{{ holdings_text }}</textarea>
+  </div>
+
+  <div class="panel">
+    <h3>盯盘参数</h3>
+    <div class="grid4">
+      <div><label>盘中扫描间隔(秒)</label><input name="DESK_INTERVAL_INTRADAY" type="number" value="{{ cfg.DESK_INTERVAL_INTRADAY }}"></div>
+      <div><label>隔夜扫描间隔(秒)</label><input name="DESK_INTERVAL_OVERNIGHT" type="number" value="{{ cfg.DESK_INTERVAL_OVERNIGHT }}"></div>
+      <div><label>日线急跌阈值(%)</label><input name="DESK_DROP_ALERT" type="number" step="0.1" value="{{ cfg.DESK_DROP_ALERT }}"></div>
+      <div><label>日内急跌阈值(%)</label><input name="DESK_FAST_DROP_PCT" type="number" step="0.1" value="{{ cfg.DESK_FAST_DROP_PCT }}"></div>
+      <div><label>隔夜挂钩异动阈值(%)</label><input name="DESK_OVERNIGHT_ALERT" type="number" step="0.1" value="{{ cfg.DESK_OVERNIGHT_ALERT }}"></div>
+      <div><label>RSI 超买线</label><input name="DESK_RSI_OB" type="number" value="{{ cfg.DESK_RSI_OB }}"></div>
+      <div><label>RSI 超卖线</label><input name="DESK_RSI_OS" type="number" value="{{ cfg.DESK_RSI_OS }}"></div>
+      <div><label>同标的冷却(秒)</label><input name="DESK_COOLDOWN" type="number" value="{{ cfg.DESK_COOLDOWN }}"></div>
+      <div><label>盘前复盘(北京时间)</label><input name="DESK_REVIEW_PREMARKET" value="{{ cfg.DESK_REVIEW_PREMARKET }}"></div>
+      <div><label>盘后复盘(北京时间)</label><input name="DESK_REVIEW_POSTMARKET" value="{{ cfg.DESK_REVIEW_POSTMARKET }}"></div>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;margin-top:12px;text-transform:none;letter-spacing:0">
+      <input type="checkbox" name="DESK_PREPOST" style="width:auto" {{ 'checked' if cfg.DESK_PREPOST }}> 分钟线包含盘前盘后(美东 04:00–20:00)
+    </label>
+  </div>
+
+  <div class="panel">
+    <h3>AI 设置</h3>
+    <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0">
+      <input type="checkbox" name="AI_ENABLED" style="width:auto" {{ 'checked' if cfg.AI_ENABLED }}> 启用 AI 多空辩论
+    </label>
+    <label>供应商</label>
+    <select name="AI_PROVIDER">
+      <option value="openai" {{ 'selected' if cfg.AI_PROVIDER=='openai' }}>openai 兼容（中转站/通义）</option>
+      <option value="claude" {{ 'selected' if cfg.AI_PROVIDER=='claude' }}>claude（Anthropic 官方）</option>
+    </select>
+    <div class="grid2">
+      <div><label>OpenAI 兼容 Base URL</label><input name="LLM_URL" value="{{ cfg.LLM_URL }}"></div>
+      <div><label>OpenAI 兼容 Model</label><input name="LLM_MODEL" value="{{ cfg.LLM_MODEL }}"></div>
+      <div style="grid-column:1/-1"><label>OpenAI 兼容 API Key</label><input name="LLM_API_KEY" value="{{ cfg.LLM_API_KEY }}"></div>
+      <div><label>Claude API Key</label><input name="CLAUDE_API_KEY" value="{{ cfg.CLAUDE_API_KEY }}"></div>
+      <div><label>Claude Model</label><input name="CLAUDE_MODEL" value="{{ cfg.CLAUDE_MODEL }}"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h3>飞书机器人（可多群）</h3>
+    {% for b in cfg.FEISHU_BOTS %}
+    <div class="grid2" style="grid-template-columns:1fr 2fr 1fr;margin-bottom:8px">
+      <input name="bot_note" placeholder="备注" value="{{ b.note }}">
+      <input name="bot_webhook" placeholder="webhook" value="{{ b.webhook }}">
+      <input name="bot_secret" placeholder="签名密钥(可空)" value="{{ b.secret }}">
+    </div>
+    {% endfor %}
+    <div class="grid2" style="grid-template-columns:1fr 2fr 1fr">
+      <input name="bot_note" placeholder="备注">
+      <input name="bot_webhook" placeholder="新增 webhook">
+      <input name="bot_secret" placeholder="签名密钥(可空)">
+    </div>
+    <label>站点地址 SITE_URL（飞书卡片跳转按钮用）</label>
+    <input name="SITE_URL" value="{{ cfg.SITE_URL }}">
+  </div>
+
+  <div class="panel">
+    <h3>修改登录密码</h3>
+    <input name="NEW_PASSWORD" type="password" placeholder="留空则不修改">
+  </div>
+
+  <div class="panel" style="border-bottom:none">
+    <button class="btn go" style="font-size:13px;padding:9px 22px">保存设置</button>
+    <span style="color:var(--ink-3);font-size:12px;margin-left:12px">保存后回盯盘台点「停止」再「启动」生效</span>
+  </div>
+</form>
+{% endblock %}

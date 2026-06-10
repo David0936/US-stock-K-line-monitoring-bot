@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}登录 · 美股盯盘台{% endblock %}
+{% block content %}
+<div class="panel" style="max-width:420px;margin:30px auto;border:1px solid var(--rule)">
+  <h3>管理员登录</h3>
+  <form method="post">
+    <label>密码</label>
+    <input type="password" name="password" autofocus>
+    <button class="btn go" style="margin-top:14px;width:100%;padding:9px">登录</button>
+  </form>
+  <div style="color:var(--ink-3);font-size:11px;margin-top:12px">首次密码见控制台启动日志 / data/default_password.txt</div>
+</div>
+{% endblock %}
