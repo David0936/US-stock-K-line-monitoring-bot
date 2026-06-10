@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 620" font-family="-apple-system,Helvetica,Arial,sans-serif">
+  <defs>
+    <style>
+      .mono{font-family:'IBM Plex Mono','SFMono-Regular',Menlo,Consolas,monospace}
+      .ink{fill:#0A0A0A}.muted{fill:#7A7068}.up{fill:#FF433D}.down{fill:#00A33E}.paper{fill:#FBF1E9}
+    </style>
+  </defs>
+
+  <!-- ground -->
+  <rect x="0" y="0" width="1200" height="620" fill="#FBF1E9"/>
+  <rect x="8" y="8" width="1184" height="604" fill="none" stroke="#0A0A0A" stroke-width="1"/>
+
+  <!-- masthead -->
+  <text x="28" y="52" class="ink" font-size="34" font-weight="800" letter-spacing="-1">US ALL-DAY DESK</text>
+  <text x="372" y="50" class="muted" font-size="15" font-weight="700">美股全天候盯盘终端</text>
+  <text x="1172" y="34" class="muted" font-size="11" font-weight="700" text-anchor="end" letter-spacing="1">FT × BLOOMBERG · 示意预览</text>
+  <line x1="8" y1="74" x2="1192" y2="74" stroke="#0A0A0A" stroke-width="3"/>
+
+  <!-- status bar -->
+  <rect x="9" y="77" width="1182" height="58" fill="#F5E7DC"/>
+  <g font-size="11">
+    <g transform="translate(28,0)">
+      <text y="100" class="muted" font-weight="700" letter-spacing="1">盯盘状态</text>
+      <circle cx="6" cy="118" r="5" fill="#FF433D"/><text x="18" y="122" class="ink" font-size="14" font-weight="700">运行中 LIVE</text>
+    </g>
+    <g transform="translate(266,0)">
+      <text y="100" class="muted" font-weight="700" letter-spacing="1">当前时段</text>
+      <text y="122" class="ink" font-size="14" font-weight="700">盘前 PRE-MARKET</text>
+    </g>
+    <g transform="translate(504,0)">
+      <text y="100" class="muted" font-weight="700" letter-spacing="1">北京时间</text>
+      <text y="122" class="ink mono" font-size="14" font-weight="600">06-10 16:42:08</text>
+    </g>
+    <g transform="translate(742,0)">
+      <text y="100" class="muted" font-weight="700" letter-spacing="1">美东时间</text>
+      <text y="122" class="ink mono" font-size="14" font-weight="600">06-10 04:42:08</text>
+    </g>
+    <g transform="translate(980,0)">
+      <text y="100" class="muted" font-weight="700" letter-spacing="1">扫描节奏</text>
+      <text y="122" class="ink mono" font-size="14" font-weight="600">盘中 ~3m</text>
+    </g>
+  </g>
+  <line x1="256" y1="77" x2="256" y2="135" stroke="#D8C7B8"/><line x1="494" y1="77" x2="494" y2="135" stroke="#D8C7B8"/>
+  <line x1="732" y1="77" x2="732" y2="135" stroke="#D8C7B8"/><line x1="970" y1="77" x2="970" y2="135" stroke="#D8C7B8"/>
+  <line x1="8" y1="135" x2="1192" y2="135" stroke="#0A0A0A"/>
+
+  <!-- macro strip -->
+  <rect x="28" y="150" width="120" height="18" fill="#0A0A0A"/><text x="38" y="163" class="paper" font-size="10" font-weight="800" letter-spacing="2">MACRO 跨市场</text>
+  <g font-size="13" class="mono" transform="translate(0,196)">
+    <text x="28" class="muted" font-size="10">ES=F 标普期</text><text x="28" y="20" class="down" font-weight="600">7365 ▼-0.34%</text>
+    <text x="230" class="muted" font-size="10">NQ=F 纳指期</text><text x="230" y="20" class="down" font-weight="600">28950 ▼-0.50%</text>
+    <text x="430" class="muted" font-size="10">KOSPI 韩国</text><text x="430" y="20" class="up" font-weight="600">7730 ▲+3.29%</text>
+    <text x="620" class="muted" font-size="10">日经225</text><text x="620" y="20" class="up" font-weight="600">64179 ▲+0.24%</text>
+    <text x="800" class="muted" font-size="10">恒生</text><text x="800" y="20" class="down" font-weight="600">24365 ▼-1.18%</text>
+    <text x="980" class="muted" font-size="10">上证</text><text x="980" y="20" class="up" font-weight="600">3993 ▲+0.86%</text>
+  </g>
+  <line x1="8" y1="232" x2="1192" y2="232" stroke="#0A0A0A" stroke-width="2"/>
+
+  <!-- board: section label -->
+  <text x="28" y="262" class="ink" font-size="14" font-weight="800" letter-spacing="-0.3">关注列表 · 个股 / 杠杆 ETF</text>
+
+  <!-- cards -->
+  <g transform="translate(0,278)">
+    <!-- card template repeated -->
+    <!-- NVDA up -->
+    <g transform="translate(28,0)">
+      <rect x="0" y="0" width="178" height="130" fill="#FCF7F1" stroke="#D8C7B8"/>
+      <rect x="0" y="0" width="3" height="130" fill="#FF433D"/>
+      <text x="14" y="26" class="ink mono" font-size="14" font-weight="700">NVDA</text>
+      <text x="14" y="40" class="muted" font-size="9">英伟达</text>
+      <text x="14" y="74" class="ink mono" font-size="22" font-weight="600">208.64</text>
+      <text x="14" y="94" class="up mono" font-size="12" font-weight="600">▲ +3.54 +1.73%</text>
+      <rect x="14" y="104" width="78" height="17" fill="#FF433D"/><text x="20" y="116" fill="#fff" font-size="9" font-weight="800">逃顶预警</text>
+    </g>
+    <!-- MU down -->
+    <g transform="translate(218,0)">
+      <rect x="0" y="0" width="178" height="130" fill="#FCF7F1" stroke="#D8C7B8"/>
+      <rect x="0" y="0" width="3" height="130" fill="#00A33E"/>
+      <text x="14" y="26" class="ink mono" font-size="14" font-weight="700">MU</text>
+      <text x="14" y="40" class="muted" font-size="9">美光科技</text>
+      <text x="14" y="74" class="ink mono" font-size="22" font-weight="600">131.76</text>
+      <text x="14" y="94" class="down mono" font-size="12" font-weight="600">▼ -2.04 -1.52%</text>
+      <rect x="14" y="104" width="86" height="17" fill="#00A33E"/><text x="20" y="116" fill="#fff" font-size="9" font-weight="800">抄底区-超卖</text>
+    </g>
+    <!-- SMCI risk -->
+    <g transform="translate(408,0)">
+      <rect x="0" y="0" width="178" height="130" fill="#FCF7F1" stroke="#D8C7B8"/>
+      <rect x="0" y="0" width="3" height="130" fill="#00A33E"/>
+      <text x="14" y="26" class="ink mono" font-size="14" font-weight="700">SMCI</text>
+      <text x="14" y="40" class="muted" font-size="9">超微电脑</text>
+      <text x="14" y="74" class="ink mono" font-size="22" font-weight="600">43.99</text>
+      <text x="14" y="94" class="down mono" font-size="12" font-weight="600">▼ -2.10 -4.54%</text>
+      <rect x="14" y="104" width="100" height="17" fill="#B8841C"/><text x="20" y="116" fill="#fff" font-size="9" font-weight="800">减仓-趋势破位</text>
+    </g>
+    <!-- SOXL 3x up -->
+    <g transform="translate(598,0)">
+      <rect x="0" y="0" width="178" height="130" fill="#FCF7F1" stroke="#D8C7B8"/>
+      <rect x="0" y="0" width="3" height="130" fill="#FF433D"/>
+      <text x="14" y="26" class="ink mono" font-size="14" font-weight="700">SOXL</text>
+      <text x="14" y="40" class="muted" font-size="9">3× 半导体多头</text>
+      <text x="14" y="74" class="ink mono" font-size="22" font-weight="600">52.18</text>
+      <text x="14" y="94" class="up mono" font-size="12" font-weight="600">▲ +1.96 +3.90%</text>
+      <rect x="14" y="104" width="70" height="17" fill="#FCF7F1" stroke="#0A0A0A"/><text x="20" y="116" class="ink" font-size="9" font-weight="800">趋势健康</text>
+    </g>
+    <!-- KORU 3x preopen risk -->
+    <g transform="translate(788,0)">
+      <rect x="0" y="0" width="178" height="130" fill="#FCF7F1" stroke="#D8C7B8"/>
+      <rect x="0" y="0" width="3" height="130" fill="#00A33E"/>
+      <text x="14" y="26" class="ink mono" font-size="14" font-weight="700">KORU</text>
+      <text x="14" y="40" class="muted" font-size="9">3× 韩国多头</text>
+      <text x="14" y="74" class="ink mono" font-size="22" font-weight="600">22.46</text>
+      <text x="14" y="94" class="down mono" font-size="12" font-weight="600">▼ -2.10 -8.55%</text>
+      <rect x="14" y="104" width="100" height="17" fill="#FF433D"/><text x="20" y="116" fill="#fff" font-size="9" font-weight="800">开盘前预警</text>
+    </g>
+    <!-- QQQ up -->
+    <g transform="translate(978,0)">
+      <rect x="0" y="0" width="186" height="130" fill="#FCF7F1" stroke="#D8C7B8"/>
+      <rect x="0" y="0" width="3" height="130" fill="#FF433D"/>
+      <text x="14" y="26" class="ink mono" font-size="14" font-weight="700">QQQ</text>
+      <text x="14" y="40" class="muted" font-size="9">纳指100 ETF</text>
+      <text x="14" y="74" class="ink mono" font-size="22" font-weight="600">716.07</text>
+      <text x="14" y="94" class="up mono" font-size="12" font-weight="600">▲ +11.01 +1.56%</text>
+      <rect x="14" y="104" width="92" height="17" fill="#0A0A0A"/><text x="20" y="116" fill="#FBF1E9" font-size="9" font-weight="800">观望-中性</text>
+    </g>
+  </g>
+
+  <!-- signal feed -->
+  <line x1="8" y1="438" x2="1192" y2="438" stroke="#0A0A0A" stroke-width="2"/>
+  <text x="28" y="466" class="ink" font-size="16" font-weight="900" letter-spacing="-0.5">SIGNAL FEED · 信号流</text>
+  <rect x="9" y="478" width="1182" height="128" fill="#FBF1E9"/>
+  <rect x="9" y="478" width="1182" height="128" fill="#FF433D" opacity="0.05"/>
+  <text x="28" y="506" class="ink mono" font-size="16" font-weight="700">KORU</text>
+  <text x="28" y="524" class="muted" font-size="10">3× 韩国多头 · 盘前</text>
+  <rect x="120" y="492" width="92" height="18" fill="#FF433D"/><text x="128" y="505" fill="#fff" font-size="10" font-weight="800">开盘前预警</text>
+  <rect x="220" y="492" width="92" height="18" fill="#FF433D"/><text x="228" y="505" fill="#fff" font-size="10" font-weight="800">建议减仓/回避</text>
+  <text x="120" y="534" class="ink" font-size="13" font-weight="500">KOSPI 暴跌 −3.29% 触发；3× 杠杆对应理论跌幅约 −9%，与盘前竞价 −8.55% 吻合。隔夜外资净流出 +</text>
+  <text x="120" y="554" class="ink" font-size="13" font-weight="500">美股期货走弱，反弹缺催化。<tspan font-weight="800">持有者优先在盘前流动性窗口减仓，勿在下降趋势中接飞刀。</tspan></text>
+  <text x="120" y="582" class="muted mono" font-size="11">🎯 跌破 661(MA50) 减仓 · VWAP 680 · 反弹阻力 730 · 置信 中</text>
+  <line x1="900" y1="486" x2="900" y2="598" stroke="#D8C7B8"/>
+  <text x="924" y="502" class="muted" font-size="9" font-weight="700" letter-spacing="1">关键位 LEVELS</text>
+  <text x="924" y="524" class="ink mono" font-size="12">触发线　KOSPI −3%</text>
+  <text x="924" y="546" class="ink mono" font-size="12">盘前参考　22.46</text>
+  <text x="924" y="568" class="ink mono" font-size="12">止损建议　21.80</text>
+  <text x="924" y="590" class="ink mono" font-size="12">反弹阻力　24.10</text>
+</svg>

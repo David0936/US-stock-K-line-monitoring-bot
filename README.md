@@ -1,8 +1,18 @@
 # 📈 Stock Desk · 美股全天候盯盘终端
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
+![Flask](https://img.shields.io/badge/Flask-web-black)
+![Data](https://img.shields.io/badge/data-yfinance-success)
+[![Stars](https://img.shields.io/github/stars/David0936/US-stock-K-line-monitoring-bot?style=social)](https://github.com/David0936/US-stock-K-line-monitoring-bot)
+
 > 把 **K线技术信号** + **当下新闻** + **跨市场宏观（期货/亚洲盘）** 联动起来，用 **AI 多空辩论**
 > 给出「买入 / 持有 / 观望 / 减仓 / 逃顶 / 抄底」的明确倾向 + 关键价位 + 风险 + 新手提醒，
 > **关键信号才推飞书**，专治新手「追涨杀跌、总做反、新闻和股价对不上」。
+
+![界面预览](docs/preview.svg)
+
+<sub>↑ 界面风格示意（真实截图见 [`docs/screenshots/`](docs/screenshots)）。📖 [使用教学](docs/USAGE.md) · 🗒️ [更新日志](CHANGELOG.md)</sub>
 
 一个**自托管、免费数据源（yfinance）**的美股盯盘机器人。盯你自己的股票，全天候（盘前 / 盘中 /
 盘后 / 隔夜）分钟级监控，关键信号推送到飞书。**社区版完全开源**；需要托管部署、自定义策略、
@@ -25,6 +35,20 @@ UI 采用 [huashu-design](https://github.com/alchaincyf/huashu-design) 的「FT 
 - **飞书推送**：interactive 卡片，关键信号才推（冷却去重防刷屏）+ 每日盘前预判 / 盘后复盘
 - **Web 盯盘台**：分组看板（大盘/期货/亚洲/个股/杠杆ETF）+ 实时报价 + 宏观条 + AI 信号流 + 个股**分钟 K 线图** + mini 走势线
 - **你自己的股票**：关注列表、杠杆倍数、挂钩映射、持仓浮亏、各类阈值与复盘时间，全部在 `/settings` 里自定义
+
+## 📸 界面截图
+
+> 以下为占位，把对应 PNG 放进 [`docs/screenshots/`](docs/screenshots) 提交后自动显示（拍法见该目录说明）。
+
+| 盯盘台 | 个股详情（分钟K线）|
+|---|---|
+| ![盯盘台](docs/screenshots/board.png) | ![个股详情](docs/screenshots/detail.png) |
+| **设置页** | **飞书推送卡片** |
+| ![设置](docs/screenshots/settings.png) | ![飞书卡片](docs/screenshots/feishu.png) |
+
+## 📚 文档
+- 📖 [使用教学 docs/USAGE.md](docs/USAGE.md) —— 从安装到看懂信号，10 分钟上手
+- 🗒️ [更新日志 CHANGELOG.md](CHANGELOG.md)
 
 ## 🚀 快速开始
 
