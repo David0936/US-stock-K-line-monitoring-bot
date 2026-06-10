@@ -122,6 +122,17 @@
   .focus-cards .card .px{font-size:23px}
   .hold-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:700;color:var(--warn);border:1px solid var(--warn);padding:1px 5px;margin-left:5px}
 
+  /* 分组入口卡（主页 → /group/<key>） */
+  .gcards{display:grid;grid-template-columns:repeat(3,1fr)}
+  .gcard{display:block;padding:14px 16px;border-right:1px solid var(--rule-soft);border-bottom:1px solid var(--rule-soft);color:var(--ink);text-decoration:none}
+  .gcard:nth-child(3n){border-right:none}
+  .gcard:hover{background:var(--paper-3);text-decoration:none}
+  .g-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+  .g-title{font-size:15px;font-weight:800;letter-spacing:-0.01em}
+  .g-cnt{font-size:11px;color:var(--ink-3);font-weight:600}
+  .g-sub{font-size:10.5px;color:var(--ink-3);margin-top:3px}
+  .g-prev{font-size:10.5px;color:var(--ink-2);margin-top:8px;line-height:1.7;word-break:break-all}
+
   /* 分组视图：单行行情列（信息降噪：无走势线） */
   .row{display:grid;grid-template-columns:120px 1fr 120px 150px auto auto;gap:12px;align-items:center;padding:10px 18px;border-bottom:1px solid var(--rule-soft);color:var(--ink);text-decoration:none}
   .row:hover{background:var(--paper-3);text-decoration:none}
@@ -199,6 +210,7 @@
     .macro-strip{grid-template-columns:repeat(2,1fr)} .macro-cell:nth-child(2n){border-right:none}
     .cards,.cards.c2{grid-template-columns:1fr 1fr} .card:nth-child(3n){border-right:1px solid var(--rule-soft)} .card:nth-child(2n){border-right:none}
     .focus-cards{grid-template-columns:1fr 1fr}
+    .gcards{grid-template-columns:1fr} .gcard{border-right:none!important}
     .row{grid-template-columns:96px 1fr 110px auto;gap:8px}
     .r-name,.row .sigtag{display:none}
     .feed-item{grid-template-columns:1fr;gap:10px} .fi-right{border-left:none;padding-left:0;border-top:1px solid var(--rule-soft);padding-top:8px}

@@ -7,12 +7,18 @@
     <h3>关注标的（空格或逗号分隔）</h3>
     <label>大盘指数</label>
     <input name="DESK_INDICES" value="{{ cfg.DESK_INDICES | join(' ') }}" placeholder="^GSPC ^IXIC QQQ">
-    <label>个股</label>
-    <input name="DESK_TICKERS" value="{{ cfg.DESK_TICKERS | join(' ') }}" placeholder="NVDA AMD TSM AVGO MU SMCI">
-    <label>杠杆 ETF</label>
-    <input name="DESK_LEVERAGED" value="{{ cfg.DESK_LEVERAGED | join(' ') }}" placeholder="SOXL SOXS USD KORU">
+    <label>科技股（英伟达生态）</label>
+    <input name="DESK_TICKERS" value="{{ cfg.DESK_TICKERS | join(' ') }}" placeholder="NVDA TSM ASML AVGO MRVL MU SMCI DELL VRT …">
+    <div class="grid2">
+      <div><label>博主提及组 · 名称</label>
+        <input name="DESK_MENTIONED_LABEL" value="{{ cfg.DESK_MENTIONED_LABEL }}" placeholder="白毛女提及"></div>
+      <div><label>博主提及组 · 标的</label>
+        <input name="DESK_MENTIONED" value="{{ cfg.DESK_MENTIONED | join(' ') }}" placeholder="RDDT AAOI AXTI POET …"></div>
+    </div>
     <label>自选（主页右上可快速添加，同样进监控）</label>
     <input name="DESK_CUSTOM" value="{{ cfg.DESK_CUSTOM | join(' ') }}" placeholder="TSLA PLTR">
+    <label>杠杆 ETF（默认不启用，盯正股自己判断趋势即可）</label>
+    <input name="DESK_LEVERAGED" value="{{ cfg.DESK_LEVERAGED | join(' ') }}" placeholder="留空 = 不监控杠杆产品">
     <div class="grid2">
       <div><label>指数期货（隔夜方向）</label>
         <input name="DESK_FUTURES" value="{{ cfg.DESK_FUTURES | join(' ') }}" placeholder="ES=F NQ=F"></div>

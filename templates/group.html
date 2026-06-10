@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}{{ gtitle }} · 美股盯盘台{% endblock %}
+{% block content %}
+
+<section class="group-head" style="border-bottom:3px double var(--rule);padding:14px 18px">
+  <div class="gt" style="flex-direction:column;align-items:flex-start;gap:3px;display:flex">
+    <h2 style="font-size:20px"><a href="{{ url_for('index') }}" style="color:var(--ink-3);text-decoration:none">盯盘台</a>
+      <span style="color:var(--ink-3)">›</span> {{ gtitle }}</h2>
+    <span class="cnt" style="text-transform:none">{{ gsub }}</span>
+  </div>
+  <span class="cnt">{{ syms|length }} 标的 · 点行进个股观察页</span>
+</section>
+
+{% if not syms %}
+<div class="hint">该分组还没有标的。{% if is_admin %}到 <a href="{{ url_for('settings') }}">设置</a> 里添加，或主页右上快速加自选。{% endif %}</div>
+{% endif %}
+
+{% for sym in syms %}
+<a class="row" data-sym="{{ sym }}" href="{{ url_for('ticker_detail', ticker=sym) }}">
+  <span class="r-tk">{{ sym }}</span>
+  <span class="r-name">{{ names.get(sym, '') }}</span>
+  <span class="r-px" data-px>—</span>
+  <span class="r-chg" data-chg>—</span>
+  {% set sig = latest.get(sym) %}
+  {% if sig and sig.label %}<span class="sigtag sig-{{ sig.label }}">{{ sig.label }}</span>{% else %}<span></span>{% endif %}
+  {% if gkey == 'custom' and is_admin %}<button class="rm" title="移出自选" onclick="removeTicker(event,'{{ sym }}')">×</button>{% else %}<span></span>{% endif %}
+</a>
+{% endfor %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function arrowSpan(pct){ return (pct>=0?'▲':'▼'); }
+async function refreshQuotes(){
+  try{
+    var data=await (await fetch('/api/quotes')).json(); var q=data.quotes||{};
+    document.querySelectorAll('.row[data-sym]').forEach(function(el){
+      var sym=el.getAttribute('data-sym'); var d=q[sym]; if(!d) return;
+      el.querySelector('[data-px]').textContent=d.price;
+      var chg=el.querySelector('[data-chg]'); var up=d.change_pct>=0;
+      chg.className='r-chg mono '+(up?'up':'down');
+      chg.innerHTML='<span class="arw">'+arrowSpan(d.change_pct)+'</span> '+(up?'+':'')+d.change+' '+(up?'+':'')+d.change_pct+'%';
+    });
+  }catch(e){}
+}
+async function removeTicker(ev,t){
+  ev.preventDefault(); ev.stopPropagation();
+  if(!confirm('把 '+t+' 移出自选？')) return;
+  try{
+    var d=await (await fetch('/api/watch/remove',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker:t})})).json();
+    if(d.ok) location.reload(); else alert(d.msg||'失败');
+  }catch(err){ alert('请求失败：'+err); }
+}
+refreshQuotes(); setInterval(refreshQuotes, 60000);
+</script>
+{% endblock %}

@@ -6,9 +6,10 @@
 {% block content %}
 
 <!-- 标的头 -->
-<section class="group-head" style="border-bottom:3px double var(--rule);padding:14px 18px" data-sym="{{ ticker }}">
+<section class="group-head" style="border-bottom:1px solid var(--rule);padding:14px 18px" data-sym="{{ ticker }}">
   <div class="gt" style="gap:14px">
     <span class="tk mono" style="font-size:26px;font-weight:700">{{ ticker }}</span>
+    {% if tname %}<span style="font-size:13px;color:var(--ink-3);align-self:center">{{ tname }}</span>{% endif %}
     <span class="px mono" data-px style="font-size:26px;font-weight:700">—</span>
     <span class="chg mono" data-chg style="font-size:15px">加载中…</span>
   </div>
@@ -16,6 +17,20 @@
   <button class="btn" onclick="analyze('{{ ticker }}',this)">🤖 立即 AI 分析</button>
   {% endif %}
 </section>
+
+<!-- 当前趋势判断（日线指标即时计算，无需先跑 AI） -->
+{% if snap %}
+<section style="border-bottom:3px double var(--rule);background:var(--paper-2);padding:10px 18px;display:flex;gap:18px;flex-wrap:wrap;align-items:center">
+  <span class="sigtag sig-{{ snap.label }}" style="margin-top:0;font-size:11px">{{ snap.label }}</span>
+  <span class="mono" style="font-size:12.5px">趋势 <b>{{ snap.trend }}</b></span>
+  <span class="mono" style="font-size:12.5px">RSI <b>{{ snap.rsi }}</b><span style="color:var(--ink-3)">（{{ snap.rsi_zone }}）</span></span>
+  <span class="mono" style="font-size:12.5px">MACD <b>{{ snap.macd_state }}</b></span>
+  <span class="mono" style="font-size:12.5px">{{ '站上' if snap.above50 else '跌破' }}MA50<span style="color:var(--ink-3)">（乖离 {{ snap.ext50 }}%）</span></span>
+  <span class="mono" style="font-size:12.5px">{{ '站上' if snap.above200 else '跌破' }}MA200</span>
+  <span class="mono" style="font-size:12.5px">近高回撤 <b>{{ snap.drawdown }}%</b></span>
+  <span class="mono" style="font-size:12.5px">距52周高 {{ snap.pct_from_52high }}%</span>
+</section>
+{% endif %}
 
 <!-- 分钟 K 线 -->
 <section>

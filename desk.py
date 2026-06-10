@@ -65,7 +65,8 @@ class Desk:
         groups = [self.config.get("DESK_INDICES") or [],
                   self.config.get("DESK_TICKERS") or [],
                   self.config.get("DESK_LEVERAGED") or [],
-                  self.config.get("DESK_CUSTOM") or []]
+                  self.config.get("DESK_CUSTOM") or [],
+                  self.config.get("DESK_MENTIONED") or []]
         seen, out = set(), []
         for g in groups:
             for t in g:

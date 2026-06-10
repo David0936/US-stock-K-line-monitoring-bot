@@ -44,9 +44,13 @@ DEFAULTS = {
     "SITE_URL": "",
     "DESK_ENABLED": True,
     "DESK_INDICES": ["^GSPC", "^IXIC", "QQQ"],
-    "DESK_TICKERS": ["NVDA", "AMD", "TSM", "AVGO", "MU", "SMCI"],
-    "DESK_LEVERAGED": ["SOXL", "SOXS", "USD", "KORU"],
+    # 科技股：英伟达生态（GPU/代工/设备/网络光模块/存储/服务器/电力散热/GPU云）
+    "DESK_TICKERS": ["NVDA", "TSM", "ASML", "AVGO", "AMD", "MRVL", "ARM", "MU",
+                     "SMCI", "DELL", "VRT", "ANET", "ALAB", "CRDO", "COHR", "LITE", "CRWV"],
+    "DESK_LEVERAGED": [],          # 杠杆 ETF（默认不启用：盯正股自己判断趋势即可）
     "DESK_CUSTOM": [],             # 自选：主页输代码快速添加，同样进监控
+    "DESK_MENTIONED": [],          # 博主提及的美股（从推文监控里提取）
+    "DESK_MENTIONED_LABEL": "博主提及",
 
     "DESK_FUTURES": ["ES=F", "NQ=F"],
     "DESK_ASIA": ["^KS11", "^N225", "^HSI", "000001.SS"],
@@ -191,47 +195,78 @@ def logout():
     return redirect(url_for("login"))
 
 
+def group_defs(cfg):
+    """[(key, 标题, 副标题, 标的列表)]，主页入口与 /group/<key> 列表页共用。"""
+    return [
+        ("custom", "自选", "你自己添加的标的", cfg.get("DESK_CUSTOM") or []),
+        ("tech", "科技股", "英伟达生态：GPU·代工·设备·光模块·存储·服务器·电力·GPU云",
+         cfg.get("DESK_TICKERS") or []),
+        ("mentioned", cfg.get("DESK_MENTIONED_LABEL", "博主提及"), "推文里点过名的美股",
+         cfg.get("DESK_MENTIONED") or []),
+        ("indices", "大盘指数", "标普 / 纳指 / QQQ", cfg.get("DESK_INDICES") or []),
+        ("futures", "指数期货", "隔夜方向", cfg.get("DESK_FUTURES") or []),
+        ("asia", "亚洲股市", "隔夜代理：韩日港沪", cfg.get("DESK_ASIA") or []),
+        ("leveraged", "杠杆 ETF", "高波动·谨慎", cfg.get("DESK_LEVERAGED") or []),
+    ]
+
+
 @app.route("/")
 def index():
-    """盯盘台：重点(持仓+自选)默认视图 + 分组标签切换 + 信号流（公开可看）。"""
+    """主页：纳指大线图 + 持仓/自选重点 + 分组入口卡 + 信号流（公开可看）。
+    导航三级：主页 → /group/<key> 列表 → /ticker/<sym> 个股观察。"""
     cfg = load_config()
-    groups = [
-        ("自选", cfg.get("DESK_CUSTOM") or []),
-        ("大盘指数", cfg.get("DESK_INDICES") or []),
-        ("指数期货", cfg.get("DESK_FUTURES") or []),
-        ("亚洲股市", cfg.get("DESK_ASIA") or []),
-        ("个股", cfg.get("DESK_TICKERS") or []),
-        ("杠杆 ETF", cfg.get("DESK_LEVERAGED") or []),
-    ]
-    # 重点 = 持仓 + 自选（去重保序）：默认视图只看这些，解决信息过载
+    groups = [g for g in group_defs(cfg) if g[3]]
+    # 重点 = 持仓 + 自选（去重保序）
     focus, seen = [], set()
     for t in list((cfg.get("HOLDINGS") or {}).keys()) + (cfg.get("DESK_CUSTOM") or []):
         t = (t or "").strip()
         if t and t not in seen:
             seen.add(t)
             focus.append(t)
-    all_syms = list({t for _, g in groups for t in g} | set(focus))
-    latest = {t: store.latest_by_ticker(t) for t in all_syms}
+    latest = {t: store.latest_by_ticker(t) for t in set([s for _, _, _, g in groups for s in g] + focus)}
     return render_template(
         "index.html",
         cfg=cfg, groups=groups, focus=focus, latest=latest, names=macro_mod.NAMES,
         holdings=cfg.get("HOLDINGS") or {},
-        signals=store.all()[:50],
+        signals=store.all()[:30],
         status=desk_status, session_label=market.SESSION_LABEL.get(market.session_now(), ""),
         is_admin=bool(session.get("auth")),
     )
 
 
+@app.route("/group/<key>")
+def group_page(key):
+    """二级页：分组行情列表，点行进个股观察页。"""
+    cfg = load_config()
+    g = next((x for x in group_defs(cfg) if x[0] == key), None)
+    if not g:
+        return redirect(url_for("index"))
+    _, title, subtitle, syms = g
+    latest = {t: store.latest_by_ticker(t) for t in syms}
+    return render_template(
+        "group.html", gkey=key, gtitle=title, gsub=subtitle, syms=syms,
+        latest=latest, names=macro_mod.NAMES, cfg=cfg,
+        status=desk_status, is_admin=bool(session.get("auth")),
+    )
+
+
 @app.route("/ticker/<ticker>")
 def ticker_detail(ticker):
+    """三级页：个股观察——K线 + 当前趋势判断 + 信号史(AI辩论) + 新闻。"""
     ticker = ticker.strip().upper().replace(" ", "")
     if not valid_ticker(ticker):
         return redirect(url_for("index"))
     cfg = load_config()
     sigs = store.by_ticker(ticker)[:30]
     items = news_mod.get_news(ticker, 8)
+    # 当前趋势快照（日线指标，走缓存，页面打开即看到趋势判断，无需先跑 AI）
+    try:
+        snap = signals.analyze(market.fetch_ohlc(ticker))
+    except Exception:
+        snap = None
     return render_template(
-        "detail.html", ticker=ticker, signals=sigs, news=items,
+        "detail.html", ticker=ticker, signals=sigs, news=items, snap=snap,
+        tname=macro_mod.NAMES.get(ticker, ""),
         status=desk_status, is_admin=bool(session.get("auth")), cfg=cfg,
     )
 
@@ -268,6 +303,9 @@ def settings():
         cfg["DESK_TICKERS"] = _tickers(f.get("DESK_TICKERS", ""))
         cfg["DESK_LEVERAGED"] = _tickers(f.get("DESK_LEVERAGED", ""))
         cfg["DESK_CUSTOM"] = _tickers(f.get("DESK_CUSTOM", ""))
+        cfg["DESK_MENTIONED"] = _tickers(f.get("DESK_MENTIONED", ""))
+        if f.get("DESK_MENTIONED_LABEL", "").strip():
+            cfg["DESK_MENTIONED_LABEL"] = f.get("DESK_MENTIONED_LABEL").strip()
         cfg["DESK_FUTURES"] = _tickers(f.get("DESK_FUTURES", ""))
         cfg["DESK_ASIA"] = _tickers(f.get("DESK_ASIA", ""))
         cfg["UNDERLYING_MAP"] = _map(f.get("UNDERLYING_MAP", ""))
@@ -339,7 +377,7 @@ def settings():
 def _all_symbols(cfg):
     out, seen = [], set()
     for k in ("DESK_INDICES", "DESK_FUTURES", "DESK_ASIA", "DESK_TICKERS",
-              "DESK_LEVERAGED", "DESK_CUSTOM"):
+              "DESK_LEVERAGED", "DESK_CUSTOM", "DESK_MENTIONED"):
         for t in cfg.get(k) or []:
             if t and t not in seen:
                 seen.add(t)
@@ -430,10 +468,16 @@ def api_ohlc(ticker):
     if interval not in ("1m", "2m", "5m", "15m", "30m", "1h", "1d", "1wk"):
         interval = "5m"
     if interval.endswith("m") or interval.endswith("h"):
-        df = market.fetch_intraday(ticker, interval=interval,
+        lookback = request.args.get("lookback", "1d")
+        if lookback not in ("1d", "5d"):
+            lookback = "1d"
+        df = market.fetch_intraday(ticker, interval=interval, lookback=lookback,
                                    prepost=request.args.get("prepost", "1") != "0")
     else:
-        df = market.fetch_ohlc(ticker, period="6mo", interval=interval)
+        period = request.args.get("period", "6mo")
+        if period not in ("1mo", "3mo", "6mo", "1y", "2y"):
+            period = "6mo"
+        df = market.fetch_ohlc(ticker, period=period, interval=interval)
     if df is None or df.empty or "close" not in df.columns:
         return jsonify(bars=[])
     bars = [{"t": int(ts.timestamp()), "o": round(float(r.open), 4), "h": round(float(r.high), 4),
